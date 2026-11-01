@@ -1,0 +1,250 @@
+db.students.insertMany([
+{_id:1,name:"Aisha", age:10,grade:5,city:"Hyderabad",marks:92, skills:["math","science"]},
+{_id:2,name:"Ravi", age:11,grade:6,city:"Chennai", marks:78, skills:["science","music"]},
+{_id:3,name:"Meera", age:10,grade:5,city:"Hyderabad",marks:92, skills:["art","math"]},
+{_id:4,name:"Arjun", age:12,grade:7,city:"Mumbai", marks:65, skills:["robotics"]},
+{_id:5,name:"Sara", age:11,grade:6,city:"Delhi", marks:null,skills:["art"]},
+{_id:6,name:"Kabir", age:12,grade:7,city:"Chennai", marks:88, skills:["math","robotics","science"
+]},
+{_id:7,name:"Zoya", age:10,grade:5,city:"Delhi", marks:71, skills:["music","art"]},
+{_id:8,name:"Dev", age:13,grade:8,city:"Mumbai", marks:55, skills:["robotics"]}
+])
+db.courses.insertMany([
+{_id:1,course_name:"Math", teacher:"Ms. Rao", max_seats:30},
+{_id:2,course_name:"Science", teacher:"Mr. Khan",max_seats:25},
+{_id:3,course_name:"Art", teacher:"Ms. Iyer",max_seats:15},
+{_id:4,course_name:"Music", teacher:"Mr. Das", max_seats:20},
+{_id:5,course_name:"Robotics",teacher:"Ms. Rao", max_seats:10}
+])
+db.enrollments.insertMany([
+{student_id:1,course_id:1,score:95},{student_id:1,course_id:2,score:88},{student_id:1,course_id:3,
+score :90},
+{student_id:2,course_id:1,score:70},{student_id:2,course_id:4,score:85},
+{student_id:3,course_id:2,score:93},{student_id:3,course_id:3,score:80},
+{student_id:4,course_id:1,score:60},{student_id:4,course_id:4,score:72},
+{student_id:5,course_id:3,score:null},
+{student_id:6,course_id:1,score:90},{student_id:6,course_id:2,score:84},{student_id:6,course_id:4,
+score:79},
+{student_id:7,course_id:3,score:74}
+])
+
+
+//PART 1 - READ AND FILTER 
+// 1.1 Show all students
+  db.students.find({});
+// 1.2 Show name and city of students older than 10
+ db.students.find( {age:{$gt:10}}, {_id:0, name:1, city:1} );
+// 1.3 Students in grade 5 or 7 using OR
+ db.students.find({ $or:[{grade:5},{grade:7}] }).sort({name:1});
+// 1.3 Students in grade 5 or 7 using IN 
+ db.students.find({ grade:{$in:[5,7]} }).sort({name:1});
+// 1.4 Names starting with A
+ db.students.find({ name:/^A/ });
+// 1.5 Find students with null marks
+ db.students.find({ marks:null });
+//1.6 Find students where marks field is completely missing 
+db.students.find({ marks:{$exists:false} });
+// 1.7 Show top 3 students with marks 
+db.students.find({ marks:{$ne:null} }).sort({marks:-1}).limit(3);
+// 1.8 Show different cities 
+db.students.distinct("city");
+// 1.9 Students who know both math and science
+ db.students.find({ skills:{$all:["math","science"]} });
+// 1.10 Students having exactly 2 skills
+ db.students.find({ skills:{$size:2} });
+// 1.11 (a) Insert Priya
+db.students.insertOne({ name:"Priya", age:11, grade:6, city:"Pune", marks:81, skills:["art"] });
+//part 2 - UPDATE AND DELETE
+// 2.1Add email to Kabir
+db.students.updateOne(
+{name:"Kabir"},
+{$set:{email:"kabir@example.com"}}
+);
+// Show Kabir after update
+db.students.find({name:"Kabir"});
+// 2.2 Rename email to email_id
+db.students.updateOne(
+{name:"Kabir"},
+{$rename:{email:"email_id"}}
+);
+// 2.3 Remove email_id
+db.students.updateOne(
+{name:"Kabir"},
+{$unset:{email_id:""}}
+);
+// Check Kabir
+db.students.find({name:"Kabir"});
+// 2.4 Add 3 marks to grade 5 students
+db.students.updateMany(
+{grade:5},
+{$inc:{marks:3}}
+);
+// 2.5 Add coding skill to Mumbai students
+db.students.updateMany(
+{city:"Mumbai"},
+{$addToSet:{skills:"coding"}}
+);
+// 2.6 Create Ishaan using upsert
+db.students.updateOne(
+{name:"Ishaan"},
+{$set:{city:"Delhi", grade:7, marks:60}},
+{upsert:true}
+);
+// Check Ishaan
+db.students.find({name:"Ishaan"});
+// 2.7 Delete Ishaan
+db.students.deleteOne({name:"Ishaan"});
+// Delete students having marks below 58
+db.students.deleteMany({
+marks:{$lt:58}
+});
+// Check remaining students
+db.students.countDocuments({});
+// Run PART 0 setup again before starting PART 3.
+// This restores the original data.
+// ==================================
+// PART 3 - AGGREGATION BASICS
+// ==================================
+// 3.1 Total students and average age
+db.students.aggregate([
+{
+$group:{
+_id:null,
+totalStudents:{$sum:1},
+averageAge:{$avg:"$age"}
+}
+}
+]);
+// 3.2 Highest and lowest marks
+db.students.aggregate([
+{
+$group:{
+_id:null,
+highestMarks:{$max:"$marks"},
+lowestMarks:{$min:"$marks"}
+}
+}
+]);
+// 3.3 Count all students
+db.students.countDocuments({});
+// Count students having non-null marks
+db.students.countDocuments({
+marks:{$ne:null}
+});
+// Difference: Sara has null marks.
+// 3.4 Count students in each grade
+db.students.aggregate([
+{
+$group:{
+_id:"$grade",
+total:{$sum:1}
+}
+},
+{$sort:{_id:1}}
+]);
+// 3.5 Average marks in each city
+db.students.aggregate([
+{
+$group:{
+_id:"$city",
+averageMarks:{$avg:"$marks"}
+}
+},
+{
+$project:{
+averageMarks:{$round:["$averageMarks",1]}
+}
+},
+{$sort:{averageMarks:-1}}
+]);
+// 3.6 Cities having average marks above 75
+db.students.aggregate([
+{
+$group:{
+_id:"$city",
+averageMarks:{$avg:"$marks"}
+}
+},
+{
+$match:{
+averageMarks:{$gt:75}
+}
+}
+]);
+// 3.7 Grades having at least 2 students
+db.students.aggregate([
+{
+$group:{
+_id:"$grade",
+total:{$sum:1}
+}
+},
+{
+$match:{
+total:{$gte:2}
+}
+}
+]);
+// 3.8 Count students in each course
+db.enrollments.aggregate([
+{
+$group:{
+_id:"$course_id",
+totalStudents:{$sum:1}
+}
+}
+]);
+// Course 5 is missing because nobody enrolled in Robotics.
+// 3.9 Highest score in each course
+db.enrollments.aggregate([
+{
+$group:{
+_id:"$course_id",
+highestScore:{$max:"$score"}
+}
+}
+]);
+// 3.10 Count students and students with marks in each city
+db.students.aggregate([
+{
+$group:{
+_id:"$city",
+totalStudents:{$sum:1},
+studentsWithMarks:{
+$sum:{
+$cond:[
+{$ne:["$marks",null]},
+1,
+0
+]
+}
+}
+}
+}
+]);
+
+//INDEX AND EXPLAIN
+
+// 4.1 Check query before creating index
+db.students.find({
+  city: "Hyderabad"
+}).explain("executionStats");
+
+// 4.2 Create index on city
+db.students.createIndex({
+  city: 1
+});
+
+// 4.3 Check query after creating index
+db.students.find({
+  city: "Hyderabad"
+}).explain("executionStats");
+
+// 4.4 Create compound index
+db.students.createIndex({
+  grade: 1,
+  marks: -1
+});
+
+// 4.5 Show all indexes
+db.students.getIndexes();
